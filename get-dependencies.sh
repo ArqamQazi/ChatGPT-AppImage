@@ -40,6 +40,7 @@ rm -f ./*.xz
 ln -sv ChatGPT ./AppDir/bin/chatgpt || :
 
 cp -v ./usr/share/applications/chatgpt.desktop ./AppDir
+sed -i 's|^Exec=chatgpt %U|Exec=chatgpt --no-sandbox %U|' ./AppDir/chatgpt.desktop
 cp -v ./usr/share/pixmaps/chatgpt.png          ./AppDir
 cp -v ./usr/share/pixmaps/chatgpt.png          ./AppDir/.DirIcon
 

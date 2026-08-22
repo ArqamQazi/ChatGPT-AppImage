@@ -9,8 +9,18 @@ export ADD_HOOKS="self-updater.hook:fix-namespaces.hook"
 export UPINFO="gh-releases-zsync|${GITHUB_REPOSITORY%/*}|${GITHUB_REPOSITORY#*/}|latest|*$ARCH.AppImage.zsync"
 export STRACE_BINARY=$(find ./AppDir/bin -maxdepth 1 -type f -executable | grep -v '\.so')
 
-# Deploy dependencies
+# Backup the pristine Electron binary BEFORE quick-sharun corrupts it with patchelf
+cp ./AppDir/bin/ChatGPT /tmp/ChatGPT_pristine
+
+# Deploy dependencies (this will corrupt ChatGPT but it successfully bundles its .so dependencies)
 quick-sharun ./AppDir/bin/*
+
+# Restore the pristine binary.
+# Depending on how quick-sharun packages things, it either leaves it in bin/ or moves it to shared/bin/
+cp /tmp/ChatGPT_pristine ./AppDir/bin/ChatGPT 2>/dev/null || true
+cp /tmp/ChatGPT_pristine ./AppDir/shared/bin/ChatGPT 2>/dev/null || true
+chmod +x ./AppDir/bin/ChatGPT 2>/dev/null || true
+chmod +x ./AppDir/shared/bin/ChatGPT 2>/dev/null || true
 
 # Additional changes can be done in between here
 
