@@ -20,17 +20,17 @@ echo '#!/bin/sh' > ./AppDir/bin/___
 echo 'echo "ldd (GNU libc) 2.33"' >> ./AppDir/bin/___
 chmod +x ./AppDir/bin/___
 
-# 3. Configure PATH_MAPPING for both the pristine AND the patched string paths
-export PATH_MAPPING='
-  /usr/bin/ldd:${SHARUN_DIR}/bin/fake-ldd
-  /XXX/YYY/ZZZ:${SHARUN_DIR}/bin/fake-ldd
-  /etc/alpine-release:${SHARUN_DIR}/does-not-exist
-  /XXX/alpine-release:${SHARUN_DIR}/does-not-exist
-'
+# We MUST set PATH_MAPPING here so quick-sharun bundles pathmap.so
+# And it must contain SHARUN_DIR to pass the validation check
+export PATH_MAPPING='/dummy:${SHARUN_DIR}/dummy'
 
 # Backup the pristine Electron binary and app.asar BEFORE quick-sharun patches them
 cp ./AppDir/bin/ChatGPT /tmp/ChatGPT_pristine
 cp ./AppDir/bin/resources/app.asar /tmp/app_asar_pristine
+
+# Also backup all other binaries in resources/ to prevent /usr/share patching which breaks codex
+mkdir -p /tmp/pristine_bins
+find ./AppDir/bin/resources -maxdepth 1 -type f -executable -not -name '*.js' -not -name '*.asar' -exec cp {} /tmp/pristine_bins/ \;
 
 # Deploy dependencies
 quick-sharun ./AppDir/bin/*
@@ -38,6 +38,16 @@ quick-sharun ./AppDir/bin/*
 # Restore pristine binary and asar to prevent patchelf and sed corruption
 cp /tmp/ChatGPT_pristine ./AppDir/shared/bin/ChatGPT
 cp /tmp/app_asar_pristine ./AppDir/bin/resources/app.asar
+
+# Restore pristine binaries to shared/bin to revert harmful /usr/share patching
+for f in /tmp/pristine_bins/*; do
+    if [ -f "$f" ]; then
+        cp "$f" ./AppDir/shared/bin/$(basename "$f")
+    fi
+done
+
+# 3. Append PATH_MAPPING to .env AFTER quick-sharun to prevent it from hardcoding the build path
+sed -i 's|^PATH_MAPPING=\(.*\)|PATH_MAPPING=\1,/usr/bin/ldd:${APPDIR}/bin/fake-ldd,/XXX/YYY/ZZZ:${APPDIR}/bin/fake-ldd,/etc/alpine-release:${APPDIR}/does-not-exist,/XXX/alpine-release:${APPDIR}/does-not-exist|g' ./AppDir/.env
 
 # Additional changes can be done in between here
 
