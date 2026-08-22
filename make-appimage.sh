@@ -14,10 +14,18 @@ echo '#!/bin/sh' > ./AppDir/bin/fake-ldd
 echo 'echo "ldd (GNU libc) 2.33"' >> ./AppDir/bin/fake-ldd
 chmod +x ./AppDir/bin/fake-ldd
 
-# 2. Configure PATH_MAPPING so the app sees the fake ldd and thinks alpine-release is missing
+# 2. quick-sharun unconditionally patches ldd strings in all .js files (like detect-libc.js).
+# We must provide a fake `___` binary to intercept `___ --version`, which is the patched version of `ldd --version`
+echo '#!/bin/sh' > ./AppDir/bin/___
+echo 'echo "ldd (GNU libc) 2.33"' >> ./AppDir/bin/___
+chmod +x ./AppDir/bin/___
+
+# 3. Configure PATH_MAPPING for both the pristine AND the patched string paths
 export PATH_MAPPING='
   /usr/bin/ldd:${SHARUN_DIR}/bin/fake-ldd
+  /XXX/YYY/ZZZ:${SHARUN_DIR}/bin/fake-ldd
   /etc/alpine-release:${SHARUN_DIR}/does-not-exist
+  /XXX/alpine-release:${SHARUN_DIR}/does-not-exist
 '
 
 # Backup the pristine Electron binary and app.asar BEFORE quick-sharun patches them
