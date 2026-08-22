@@ -20,14 +20,16 @@ export PATH_MAPPING='
   /etc/alpine-release:${SHARUN_DIR}/does-not-exist
 '
 
-# Backup ONLY the pristine Electron binary (app.asar no longer needs backing up!)
+# Backup the pristine Electron binary and app.asar BEFORE quick-sharun patches them
 cp ./AppDir/bin/ChatGPT /tmp/ChatGPT_pristine
+cp ./AppDir/bin/resources/app.asar /tmp/app_asar_pristine
 
 # Deploy dependencies
 quick-sharun ./AppDir/bin/*
 
-# Restore pristine binary to prevent patchelf corruption
+# Restore pristine binary and asar to prevent patchelf and sed corruption
 cp /tmp/ChatGPT_pristine ./AppDir/shared/bin/ChatGPT
+cp /tmp/app_asar_pristine ./AppDir/bin/resources/app.asar
 
 # Additional changes can be done in between here
 
