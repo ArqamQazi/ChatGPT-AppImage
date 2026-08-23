@@ -107,20 +107,15 @@ C_EOF
 gcc -shared -fPIC spoof.c -o ./AppDir/shared/lib/spoof-ldd.so -ldl
 rm spoof.c
 
-if [ -L ./AppDir/AppRun ]; then
-  REAL_APPRUN=$(readlink ./AppDir/AppRun)
-  rm ./AppDir/AppRun
-  cat << A_EOF > ./AppDir/AppRun
+mv ./AppDir/AppRun ./AppDir/AppRun.real
+cat << A_EOF > ./AppDir/AppRun
 #!/bin/sh
 export SHARUN_ALLOW_LD_PRELOAD=1
 export FAKE_LDD_PATH="\${APPDIR}/fake-ldd"
 export LD_PRELOAD="\${APPDIR}/shared/lib/spoof-ldd.so\${LD_PRELOAD:+:\$LD_PRELOAD}"
-exec "\${APPDIR}/$REAL_APPRUN" "\$@"
+exec "\${APPDIR}/AppRun.real" "\$@"
 A_EOF
-  chmod +x ./AppDir/AppRun
-else
-  sed -i '1 a export SHARUN_ALLOW_LD_PRELOAD=1\nexport FAKE_LDD_PATH="\${APPDIR}/fake-ldd"\nexport LD_PRELOAD="\${APPDIR}/shared/lib/spoof-ldd.so\${LD_PRELOAD:+:\$LD_PRELOAD}"' ./AppDir/AppRun
-fi
+chmod +x ./AppDir/AppRun
 
 # Turn AppDir into AppImage
 quick-sharun --make-appimage
