@@ -22,6 +22,106 @@ cp /tmp/app_asar_pristine ./AppDir/bin/resources/app.asar
 
 # Additional changes can be done in between here
 
+# Inject LD_PRELOAD library to trick detect-libc without modifying the ASAR files
+echo "GNU C Library (GNU libc) 2.31" > ./AppDir/fake-ldd
+cat << 'C_EOF' > spoof.c
+#define _GNU_SOURCE
+#include <dlfcn.h>
+#include <string.h>
+#include <fcntl.h>
+#include <stdarg.h>
+#include <stdlib.h>
+
+static int (*orig_openat)(int, const char *, int, ...);
+static int (*orig_openat64)(int, const char *, int, ...);
+static int (*orig_open)(const char *, int, ...);
+static int (*orig_open64)(const char *, int, ...);
+
+void __attribute__((constructor)) init() {
+    orig_openat = dlsym(RTLD_NEXT, "openat");
+    orig_openat64 = dlsym(RTLD_NEXT, "openat64");
+    orig_open = dlsym(RTLD_NEXT, "open");
+    orig_open64 = dlsym(RTLD_NEXT, "open64");
+}
+
+int openat(int dirfd, const char *pathname, int flags, ...) {
+    if (pathname && strcmp(pathname, "/usr/bin/ldd") == 0) {
+        const char *fake = getenv("FAKE_LDD_PATH");
+        if (fake) pathname = fake;
+    }
+    mode_t mode = 0;
+    if (flags & O_CREAT) {
+        va_list args;
+        va_start(args, flags);
+        mode = va_arg(args, mode_t);
+        va_end(args);
+    }
+    return orig_openat ? orig_openat(dirfd, pathname, flags, mode) : -1;
+}
+
+int openat64(int dirfd, const char *pathname, int flags, ...) {
+    if (pathname && strcmp(pathname, "/usr/bin/ldd") == 0) {
+        const char *fake = getenv("FAKE_LDD_PATH");
+        if (fake) pathname = fake;
+    }
+    mode_t mode = 0;
+    if (flags & O_CREAT) {
+        va_list args;
+        va_start(args, flags);
+        mode = va_arg(args, mode_t);
+        va_end(args);
+    }
+    return orig_openat64 ? orig_openat64(dirfd, pathname, flags, mode) : -1;
+}
+
+int open(const char *pathname, int flags, ...) {
+    if (pathname && strcmp(pathname, "/usr/bin/ldd") == 0) {
+        const char *fake = getenv("FAKE_LDD_PATH");
+        if (fake) pathname = fake;
+    }
+    mode_t mode = 0;
+    if (flags & O_CREAT) {
+        va_list args;
+        va_start(args, flags);
+        mode = va_arg(args, mode_t);
+        va_end(args);
+    }
+    return orig_open ? orig_open(pathname, flags, mode) : -1;
+}
+
+int open64(const char *pathname, int flags, ...) {
+    if (pathname && strcmp(pathname, "/usr/bin/ldd") == 0) {
+        const char *fake = getenv("FAKE_LDD_PATH");
+        if (fake) pathname = fake;
+    }
+    mode_t mode = 0;
+    if (flags & O_CREAT) {
+        va_list args;
+        va_start(args, flags);
+        mode = va_arg(args, mode_t);
+        va_end(args);
+    }
+    return orig_open64 ? orig_open64(pathname, flags, mode) : -1;
+}
+C_EOF
+gcc -shared -fPIC spoof.c -o ./AppDir/shared/lib/spoof-ldd.so -ldl
+rm spoof.c
+
+if [ -L ./AppDir/AppRun ]; then
+  REAL_APPRUN=$(readlink ./AppDir/AppRun)
+  rm ./AppDir/AppRun
+  cat << A_EOF > ./AppDir/AppRun
+#!/bin/sh
+export SHARUN_ALLOW_LD_PRELOAD=1
+export FAKE_LDD_PATH="\${APPDIR}/fake-ldd"
+export LD_PRELOAD="\${APPDIR}/shared/lib/spoof-ldd.so\${LD_PRELOAD:+:\$LD_PRELOAD}"
+exec "\${APPDIR}/$REAL_APPRUN" "\$@"
+A_EOF
+  chmod +x ./AppDir/AppRun
+else
+  sed -i '1 a export SHARUN_ALLOW_LD_PRELOAD=1\nexport FAKE_LDD_PATH="\${APPDIR}/fake-ldd"\nexport LD_PRELOAD="\${APPDIR}/shared/lib/spoof-ldd.so\${LD_PRELOAD:+:\$LD_PRELOAD}"' ./AppDir/AppRun
+fi
+
 # Turn AppDir into AppImage
 quick-sharun --make-appimage
 
