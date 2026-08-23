@@ -34,8 +34,12 @@ cp ./AppDir/bin/ChatGPT /tmp/ChatGPT_pristine
 # Deploy dependencies
 quick-sharun ./AppDir/bin/*
 
-# Restore pristine binary to prevent patchelf corruption
+# Restore pristine binary to prevent patchelf corruption from breaking ASAR integrity
 cp /tmp/ChatGPT_pristine ./AppDir/shared/bin/ChatGPT
+
+# Safely patch hardcoded paths without changing file size or breaking integrity checks
+sed -i 's|/usr/share|././share|g' ./AppDir/shared/bin/ChatGPT
+sed -i 's|/usr/lib|././lib|g' ./AppDir/shared/bin/ChatGPT
 
 # Restore resources into shared/bin/ where the real ChatGPT binary expects it
 mv /tmp/resources_pristine ./AppDir/shared/bin/resources
