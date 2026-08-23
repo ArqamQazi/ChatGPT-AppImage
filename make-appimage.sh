@@ -37,11 +37,6 @@ quick-sharun ./AppDir/bin/*
 # Restore pristine binary to prevent patchelf corruption from breaking ASAR integrity
 cp /tmp/ChatGPT_pristine ./AppDir/shared/bin/ChatGPT
 
-# Safely patch hardcoded paths without changing file size or breaking integrity checks
-# MUST use LC_ALL=C so sed treats the file as raw binary bytes and doesn't corrupt it
-LC_ALL=C sed -i 's|/usr/share|././share|g' ./AppDir/shared/bin/ChatGPT
-LC_ALL=C sed -i 's|/usr/lib|././lib|g' ./AppDir/shared/bin/ChatGPT
-
 # Restore resources into shared/bin/ where the real ChatGPT binary expects it
 mv /tmp/resources_pristine ./AppDir/shared/bin/resources
 
