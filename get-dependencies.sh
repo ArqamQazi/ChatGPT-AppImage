@@ -6,7 +6,7 @@ ARCH=$(uname -m)
 
 echo "Installing package dependencies..."
 echo "---------------------------------------------------------------"
-sudo pacman -Syu --noconfirm libnss_nis nss-mdns nss
+sudo pacman -Syu --noconfirm libnss_nis nss-mdns nss gtk3 libcups libxkbcommon libxcomposite libxdamage at-spi2-core
 
 echo "Installing debloated packages..."
 echo "---------------------------------------------------------------"
