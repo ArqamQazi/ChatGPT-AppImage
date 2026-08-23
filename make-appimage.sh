@@ -107,45 +107,12 @@ C_EOF
 gcc -shared -fPIC spoof.c -o ./AppDir/shared/lib/spoof-ldd.so -ldl
 rm spoof.c
 
-mv ./AppDir/AppRun ./AppDir/AppRun.real
-cat << 'A_EOF' > apprun.c
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-
-int main(int argc, char **argv) {
-    const char *appdir = getenv("APPDIR");
-    if (!appdir) {
-        fprintf(stderr, "APPDIR not set\n");
-        return 1;
-    }
-    
-    setenv("SHARUN_ALLOW_LD_PRELOAD", "1", 1);
-    
-    char fake_ldd[4096];
-    snprintf(fake_ldd, sizeof(fake_ldd), "%s/fake-ldd", appdir);
-    setenv("FAKE_LDD_PATH", fake_ldd, 1);
-    
-    char preload[8192];
-    const char *old_preload = getenv("LD_PRELOAD");
-    if (old_preload && old_preload[0] != '\0') {
-        snprintf(preload, sizeof(preload), "%s/shared/lib/spoof-ldd.so:%s", appdir, old_preload);
-    } else {
-        snprintf(preload, sizeof(preload), "%s/shared/lib/spoof-ldd.so", appdir);
-    }
-    setenv("LD_PRELOAD", preload, 1);
-    
-    char real_apprun[4096];
-    snprintf(real_apprun, sizeof(real_apprun), "%s/AppRun.real", appdir);
-    
-    execv(real_apprun, argv);
-    perror("execv");
-    return 1;
-}
-A_EOF
-gcc apprun.c -o ./AppDir/AppRun
-rm apprun.c
+cat << 'HOOK_EOF' > ./AppDir/bin/spoof-ldd.hook
+export SHARUN_ALLOW_LD_PRELOAD=1
+export FAKE_LDD_PATH="${APPDIR}/fake-ldd"
+export LD_PRELOAD="${APPDIR}/shared/lib/spoof-ldd.so${LD_PRELOAD:+:$LD_PRELOAD}"
+HOOK_EOF
+chmod +x ./AppDir/bin/spoof-ldd.hook
 
 # Turn AppDir into AppImage
 quick-sharun --make-appimage
