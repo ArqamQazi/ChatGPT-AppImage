@@ -37,6 +37,17 @@ quick-sharun ./AppDir/bin/*
 # Restore pristine binary to prevent patchelf corruption from breaking ASAR integrity
 cp /tmp/ChatGPT_pristine ./AppDir/shared/bin/ChatGPT
 
+# Safely patch hardcoded /usr paths by replacing exact bytes using Python (to prevent ELF corruption)
+python3 -c "
+import sys
+with open(sys.argv[1], 'rb') as f:
+    d = f.read()
+d = d.replace(b'/usr/share', b'././share')
+d = d.replace(b'/usr/lib', b'././lib')
+with open(sys.argv[1], 'wb') as f:
+    f.write(d)
+" ./AppDir/shared/bin/ChatGPT
+
 # Restore resources into shared/bin/ where the real ChatGPT binary expects it
 mv /tmp/resources_pristine ./AppDir/shared/bin/resources
 
