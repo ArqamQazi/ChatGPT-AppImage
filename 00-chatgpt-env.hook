@@ -1,0 +1,14 @@
+#!/bin/sh
+# Setup Codex paths and ensure directories exist to avoid bootstrap crashes
+export CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
+export CODEX_ELECTRON_USER_DATA_PATH="${CODEX_ELECTRON_USER_DATA_PATH:-${XDG_CONFIG_HOME:-$HOME/.config}/Codex}"
+
+mkdir -p "$CODEX_HOME" "$CODEX_HOME/sqlite" "$CODEX_HOME/cross-instance-locks"
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/Codex"
+mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/codex/logs"
+
+# In portable mode, if host REAL_HOME differs from HOME, ensure host .codex exists
+# in case external processes or un-isolated fallbacks query it.
+if [ -n "$REAL_HOME" ] && [ "$REAL_HOME" != "$HOME" ]; then
+	mkdir -p "$REAL_HOME/.codex/cross-instance-locks" "$REAL_HOME/.codex/sqlite"
+fi
