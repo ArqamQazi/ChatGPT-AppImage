@@ -9,19 +9,23 @@ export ADD_HOOKS="self-updater.hook:fix-namespaces.hook"
 export UPINFO="gh-releases-zsync|${GITHUB_REPOSITORY%/*}|${GITHUB_REPOSITORY#*/}|latest|*$ARCH.AppImage.zsync"
 export STRACE_BINARY=$(find ./AppDir/bin -maxdepth 1 -type f -executable | grep -v '\.so')
 
-# Backup the pristine Electron binary and app.asar BEFORE quick-sharun corrupts them
-cp ./AppDir/bin/ChatGPT /tmp/ChatGPT_pristine
+# Backup pristine codex binaries before quick-sharun wraps or modifies them
+cp ./AppDir/bin/resources/codex /tmp/codex_pristine
+cp ./AppDir/bin/resources/codex-code-mode-host /tmp/codex_host_pristine
 
 # Deploy dependencies (this bundles .so dependencies)
 quick-sharun ./AppDir/bin/*
 
-if [ -f "./AppDir/shared/bin/ChatGPT" ]; then
-  cp /tmp/ChatGPT_pristine ./AppDir/shared/bin/ChatGPT
-else
-  cp /tmp/ChatGPT_pristine ./AppDir/bin/ChatGPT
-fi
+rm -f ./AppDir/bin/resources/codex
+cp /tmp/codex_pristine ./AppDir/bin/resources/codex
+chmod +x ./AppDir/bin/resources/codex
 
-chmod +x ./AppDir/shared/bin/ChatGPT 2>/dev/null || true
+rm -f ./AppDir/bin/resources/codex-code-mode-host
+cp /tmp/codex_host_pristine ./AppDir/bin/resources/codex-code-mode-host
+chmod +x ./AppDir/bin/resources/codex-code-mode-host
+
+rm -f ./AppDir/shared/bin/codex ./AppDir/bin/codex
+rm -f ./AppDir/shared/bin/codex-code-mode-host ./AppDir/bin/codex-code-mode-host
 
 # Turn AppDir into AppImage
 quick-sharun --make-appimage
